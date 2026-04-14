@@ -1,0 +1,69 @@
+name: 'git-sem-ver'
+description: 'Generate a semantic version from GitFlow branch conventions'
+author: 'remi'
+
+inputs:
+  bump:
+    description: |
+      Override the version bump type: "major", "minor", or "patch".
+      Default strategy: feat/* → minor, everything else → patch.
+      Use "major" when introducing breaking changes.
+    required: false
+    default: ''
+
+outputs:
+  version:
+    description: 'The generated semantic version (e.g. 1.3.0-feat.my-feature.5)'
+    value: ${{ steps.generate.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Download git-sem-ver binary
+      shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+      run: |
+        set -euo pipefail
+
+        # Map GitHub Actions runner variables to goreleaser naming
+        case "$RUNNER_OS" in
+          Linux)   OS="linux"   ;;
+          macOS)   OS="darwin"  ;;
+          Windows) OS="windows" ;;
+          *) echo "::error::Unsupported OS: $RUNNER_OS" && exit 1 ;;
+        esac
+
+        case "$RUNNER_ARCH" in
+          X64)   ARCH="amd64" ;;
+          ARM64) ARCH="arm64" ;;
+          *) echo "::error::Unsupported arch: $RUNNER_ARCH" && exit 1 ;;
+        esac
+
+        VERSION="$ACTION_REF"
+        if [[ "$VERSION" != v* ]]; then
+          echo "::error::git-sem-ver must be pinned to a release tag (e.g. @v1.0.0), got: $VERSION"
+          exit 1
+        fi
+
+        INSTALL_DIR="$RUNNER_TEMP/git-sem-ver-bin"
+        mkdir -p "$INSTALL_DIR"
+
+        BASE_URL="https://github.com/Vr00mm/git-sem-ver/releases/download/${VERSION}"
+
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          curl -sSfL "${BASE_URL}/git-sem-ver_${OS}_${ARCH}.zip" -o "$RUNNER_TEMP/git-sem-ver.zip"
+          unzip -q "$RUNNER_TEMP/git-sem-ver.zip" -d "$INSTALL_DIR"
+        else
+          curl -sSfL "${BASE_URL}/git-sem-ver_${OS}_${ARCH}.tar.gz" | tar xz -C "$INSTALL_DIR"
+          chmod +x "$INSTALL_DIR/git-sem-ver"
+        fi
+
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+
+    - name: Generate version
+      id: generate
+      shell: bash
+      env:
+        GIT_SEM_VER_BUMP: ${{ inputs.bump }}
+      run: git-sem-ver

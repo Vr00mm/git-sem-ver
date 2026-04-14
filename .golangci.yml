@@ -1,0 +1,87 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - errcheck        # unchecked errors
+    - govet           # go vet
+    - staticcheck     # SA*, S*, QF* checks
+    - unused          # unused code
+    - ineffassign     # assignment to variable never read
+    - nilerr          # return nil instead of typed nil
+    - noctx           # http request without context
+    - bodyclose       # unclosed http response bodies
+
+    # Error handling
+    - wrapcheck       # errors from external packages must be wrapped
+    - errorlint       # incorrect errors.Is/As usage
+
+    # Style
+    - gocritic        # misc opinionated checks
+    - revive          # fast, extensible linter
+    - misspell        # spelling mistakes in comments
+    - godot           # comment sentences end with a period
+
+    # Complexity
+    - gocognit        # cognitive complexity
+    - cyclop          # cyclomatic complexity
+
+    # Security
+    - gosec           # common security issues
+
+    # Tests
+    - testifylint     # correct testify usage
+    - thelper         # test helpers must call t.Helper()
+    - paralleltest    # missing t.Parallel() in table-driven tests
+
+    # Miscellaneous
+    - goconst         # repeated strings that could be constants
+    - godox           # TODO/FIXME/HACK without a ticket reference
+    - prealloc        # slice preallocation
+
+  settings:
+    gocognit:
+      min-complexity: 15
+
+    cyclop:
+      max-complexity: 15
+
+    revive:
+      rules:
+        - name: exported
+        - name: var-naming
+        - name: unexported-return
+
+    godot:
+      scope: all
+      capital: false
+
+    gosec:
+      excludes:
+        - G304  # file path from env var — controlled by GitHub Actions runtime, not user input
+        - G703  # path traversal on GITHUB_OUTPUT — controlled by GitHub Actions runtime
+
+    wrapcheck: {}
+
+  exclusions:
+    rules:
+      # Test files get relaxed rules
+      - path: _test\.go
+        linters:
+          - wrapcheck
+          - goconst
+          - godot
+          - godox
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0

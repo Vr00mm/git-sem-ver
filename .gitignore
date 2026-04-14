@@ -1,0 +1,4 @@
+/git-sem-ver
+/vendor/
+coverage.out
+dist/
